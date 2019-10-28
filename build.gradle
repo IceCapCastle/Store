@@ -1,27 +1,59 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+def config = rootProject.ext
 
-//统一依赖库版本。
-apply from : "config.gradle"
-
-buildscript {
-    repositories {
-        maven { url 'https://maven.google.com' }
-        jcenter()
-        google()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.1'
-    }
+if (isNeedStoreModule.toBoolean()) {
+    apply plugin: 'com.android.library'
+} else {
+    apply plugin: 'com.android.application'
 }
 
-allprojects {
+android {
+    compileSdkVersion config.android.compileSdkVersion
+    buildToolsVersion config.android.buildToolsVersion
+    defaultConfig {
+        if (!isNeedStoreModule.toBoolean()) {
+            applicationId "com.demo.lizejun.module.store"
+        }
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = [moduleName: project.getName()]
+            }
+        }
+        minSdkVersion config.android.minSdkVersion
+        targetSdkVersion config.android.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
-    repositories {
-        jcenter()
-        maven { url 'https://maven.google.com' }
     }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    sourceSets {
+        main {
+            if (!isNeedStoreModule.toBoolean()) {
+                manifest.srcFile 'src/debug/AndroidManifest.xml'
+            } else {
+                manifest.srcFile 'src/main/AndroidManifest.xml'
+                java {
+                    exclude '**/debug/**'
+                }
+            }
+        }
+    }
+
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    compile config.dependencies["support-v7"]
+    testCompile config.dependencies["junit"]
+    //在业务组件中，需要导入路由的编译期依赖库、以及所有的基础组件。
+    annotationProcessor config.dependencies["arouter-compiler"]
+    compile project(":lib-base")
 }
